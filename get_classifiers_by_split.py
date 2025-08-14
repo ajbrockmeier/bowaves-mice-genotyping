@@ -141,9 +141,9 @@ def get_classifier(pipe_i, X, y, groups, train_group_max, group_kfold,param_grid
     f"  Test:  {np.bincount(y[test_indices], minlength=1+np.max(y))}, {np.bincount(groups[test_indices], minlength=1+np.max(groups))}")
 
     #    for i, (in_index, out_index) in enumerate(group_kfold.split(X, y, groups)):
-    for i, (val_in_index, val_out_index) in enumerate(group_kfold.split(X[groups >= train_group_max],
-                                                                        y[groups >= train_group_max],
-                                                                        groups[groups >= train_group_max])):
+    for i, (val_in_index, val_out_index) in enumerate(group_kfold.split(X[groups > train_group_max],
+                                                                        y[groups > train_group_max],
+                                                                        groups[groups > train_group_max])):
         in_index = np.concatenate((train_indices, test_indices[val_in_index]))
         out_index = test_indices[val_out_index]
         print(np.intersect1d(groups[in_index],groups[out_index]))
