@@ -142,9 +142,6 @@ def si_kmeans_single(X, n_clusters, centroid_length, metric='euclidean', use_sig
     centroids = _random_init(X, n_clusters, centroid_length,rng)
 
     
-    #The below is Dr. B's additions from the Jupyter notebook.
-    #I've added the update step function to the utils file.
-    #Adding here to test before PR
     labels, shifts, distances, signs = _assignment_step(
         X, centroids, metric, use_sign_invariant)
     centroids = _init_centroids_update_step(

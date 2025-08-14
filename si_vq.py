@@ -12,16 +12,23 @@ def si_vq(X,Y,metric):
     for shift in range(M-L+1):
         Xshift = X[:,shift:shift+L].astype('f')
         if metric == 'cosine':
-            nX = normalize(Xshift,axis=1)
-            XY = nX@nY.T
-            argmins[:,shift] = np.argmax(XY,axis=1)
-            distances[:,shift] = 1 - XY[np.arange(n),argmins[:,shift]] # distance_cosine(x,y) = 1- sim(x,y)
+            nX = normalize(Xshift, axis=1)
+            XY = nX @ nY.T
+            argmins[:, shift] = np.argmax(XY, axis=1)
+            distances[:, shift] = 1 - XY[np.arange(n), argmins[:, shift]]  # distance_cosine(x,y) = 1- sim(x,y)
+        elif metric == 'sise':
+            XY = Xshift @ nY.T
+            argmins[:, shift] = np.argmax(XY, axis=1)
+            distances[:, shift] = Xinorm2 - XY[
+                np.arange(n), argmins[:, shift]] ** 2  # distance(x,y) = |Xnorm|^2 - |Xnorm|*sim(x,y)
+        elif metric == 'euclidean':
+            Xnorm = np.sqrt(np.sum(Xshift ** 2, axis=1, keepdims=True))
+            XY = Xshift @ Y.T
+            all_distances = Xnorm ** 2 - 2 * XY + Ynorm.T ** 2
+            argmins[:, shift] = np.argmin(all_distances, axis=1)
+            distances[:, shift] = all_distances[np.arange(n), argmins[:, shift]]
         else:
-            Xnorm = np.sqrt(np.sum(Xshift**2,axis=1,keepdims=True))
-            XY = Xshift@Y.T
-            all_distances = Xnorm + XY + Ynorm.T
-            argmins[:,shift] = np.argmin(all_distances,axis=1)
-            distances[:,shift] = all_distances[np.arange(n),argmins[:,shift]] # distance_cosine(x,y) = 1- sim(x,y)
+            raise NotImplementedError
     
     best_shifts = np.argmin(distances,axis=1)
     best_distances = distances[np.arange(n),best_shifts]
