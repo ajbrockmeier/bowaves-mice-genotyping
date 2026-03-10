@@ -9,8 +9,6 @@ from si2_kmeans import si_kmeans
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import normalize
 
-from feature_extractors.iclabel_features import get_iclabel_features
-
 
 from scipy.fft import fft, fftfreq
 
@@ -333,32 +331,6 @@ def get_labels_subjects(segment_info):
         i_samples += len(subject_index)
     return label_vector, subject_vector, subject_index2name
 
-
-def get_features_by_type_fold(df, test_fold, split, train_valid_test, n_segments, segment_length):
-    grab_windows_funcs = {'train': grab_windows_train, 'test': grab_windows_test, 'valid': grab_windows_valid}
-    grab_windows_func = grab_windows_funcs[train_valid_test]
-    segment_info = dict()
-    strains = df['strain'].unique()
-    tscs = df['tsc'].unique()
-
-    all_features = dict()
-
-    for strain in strains:
-        for tsc in tscs:
-            key_segment = (split, test_fold, strain, tsc)
-            time_start = time.time()
-            match = (df['tsc'] == tsc) & (df['strain'] == strain)
-            signal_segments, segment_indices, name_list = grab_windows_func(df[match], test_fold, split,
-                                                                            int(n_segments), segment_length)
-            segment_info[key_segment] = (segment_indices, name_list)
-            start_time = time.time()
-            # reshape `features` to (n_time_series, n_segments, n_features)
-            sfreq = df['sfreq'].iloc[0]  # assume all mice are the same, should be checked on any new dataset
-            features = get_iclabel_features(signal_segments, sfreq=sfreq)
-            print("--- %s seconds ---" % (time.time() - start_time))
-            all_features[key_segment] = features
-
-    return segment_info, all_features
 
 
 def get_counts_by_type_fold(df,test_fold,split,train_valid_test,n_segments,segment_length,window_length,waveform_dict,use_sign_invariant=False,use_spectral=False):
