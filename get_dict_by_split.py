@@ -19,8 +19,12 @@ def strip_leading_from_list_filenames(list_filenames):
     return l2
 
 
+# Start of new "use_svd" flag
 def main(df_filename, test_fold, split, strain, tsc, window_length_s, n_windows, centroid_length_s, n_centroids,
-         use_sign_invariant=False, use_sphere=False, use_spectral=False, hpc=False):
+         use_sign_invariant=False, use_sphere=False, use_spectral=False, hpc=False, use_svd=False):
+    # DEBUG PRINTOUT
+    args = parser.parse_args()
+    print(f"DEBUG: Main function - Parsed arguments: {args}")
     strains = ('BXD87', 'DBA2', 'C57B6')
     tscs = ('Het', 'WT')
     source = 'Jax_Lab'
@@ -69,12 +73,12 @@ def main(df_filename, test_fold, split, strain, tsc, window_length_s, n_windows,
     time_end = time.time()
     a_time = time_end - time_start
     print("time in minutes (windows):", a_time / 60)
-
     if use_spectral:
         centroids, labels, inertia, iters = create_spectral_codebooks(windows, n_centroids, nfft=nfft)
         train_info = (mice_names, window_indices, labels, inertia, iters)
+    # New use of "use_svd" flag ---------------------------
     else:
-        centroids, labels, shifts, inertia, iters = create_codebooks(windows, n_centroids, centroid_len, use_sign_invariant)
+        centroids, labels, shifts, inertia, iters = create_codebooks(windows, n_centroids, centroid_len, use_sign_invariant, use_svd, use_sphere)
         train_info = (mice_names, window_indices, labels, shifts, inertia, iters)
 
     time_end = time.time()
@@ -115,6 +119,9 @@ if __name__ == '__main__':
     parser.set_defaults(use_sign_invariant=False)
     parser.add_argument('--sphere', dest='use_sphere', action='store_true')
     parser.set_defaults(use_sphere=False)
+    # NEW FLAG FOR SVD --------------------------------
+    parser.add_argument('--svd', dest='use_svd', action='store_true')
+    parser.set_defaults(use_svd=False)
     parser.add_argument('--spectral', dest='use_spectral', action='store_true')
     parser.set_defaults(use_spectral=False)
     parser.add_argument('--hpc', action='store_true')
@@ -134,5 +141,4 @@ if __name__ == '__main__':
 
     main(args.df, args.fold, args.split, args.class1, args.class2,
          args.window_length_s, args.windows, args.centroid_length_s, args.n_centroids, args.use_sign_invariant,args.use_sphere,
-         args.use_spectral, args.hpc)
-
+         args.use_spectral, args.hpc, args.use_svd)
