@@ -147,6 +147,8 @@ def si_kmeans_single(X, n_clusters, centroid_length, metric='euclidean', use_sig
     centroids = _init_centroids_update_step(
         X, centroid_length, n_clusters, labels, shifts, signs, do_sphere) # NEW
 
+    centroids /= np.sqrt(np.sum(centroids ** 2, axis = 1, keepdims= True))
+
     if verbose:
         print('Initialization completed.')
 
@@ -156,6 +158,9 @@ def si_kmeans_single(X, n_clusters, centroid_length, metric='euclidean', use_sig
         # SVD flag added --------------------
         centroids = _centroids_update_step(
             X, centroid_length, n_clusters, labels, shifts, signs, do_sphere, use_svd)
+
+        centroids /= np.sqrt(np.sum(centroids ** 2, axis = 1, keepdims= True))
+
 
         inertia = distances.mean()
 
