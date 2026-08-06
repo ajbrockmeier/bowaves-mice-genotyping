@@ -63,7 +63,11 @@ def main(df_filename, test_fold, split, strain, tsc, window_length_s, n_windows,
             str_sph = '_sph'
         else:
             str_sph = ''
-        param_string = str(n_windows) + '_' + str(window_length) + '_' + str(n_centroids) + '_' + str(centroid_len) + str_si +str_sph
+        if use_svd:
+            str_svd = '_svd'
+        else:
+            str_svd = ''
+        param_string = str(n_windows) + '_' + str(window_length) + '_' + str(n_centroids) + '_' + str(centroid_len) + str_si + str_sph + str_svd
 
     centroids_param_string = str(split)+str(test_fold) + strain + tsc + param_string
     print('Running:', centroids_param_string)
@@ -87,6 +91,7 @@ def main(df_filename, test_fold, split, strain, tsc, window_length_s, n_windows,
 
     pickle.dump(centroids, open("data/centroids_" + centroids_param_string + ".pickle", "wb"))
     pickle.dump(train_info, open("data/centroids_info_"+centroids_param_string+".pickle", "wb"))
+
 
 
 if __name__ == '__main__':
@@ -142,3 +147,4 @@ if __name__ == '__main__':
     main(args.df, args.fold, args.split, args.class1, args.class2,
          args.window_length_s, args.windows, args.centroid_length_s, args.n_centroids, args.use_sign_invariant,args.use_sphere,
          args.use_spectral, args.hpc, args.use_svd)
+    
