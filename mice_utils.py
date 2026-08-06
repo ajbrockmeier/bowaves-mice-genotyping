@@ -133,12 +133,13 @@ def grab_windows_valid(df,test_fold,split,n_windows,window_length,just_indices=F
 def grab_windows_test(df,test_fold,split,n_windows,window_length,just_indices=False,chan=0,rng=np.random.default_rng(0)):
     return grab_windows(get_fold(df,test_fold,split,False),n_windows,window_length,just_indices,chan,False, rng)    
 
-
-def create_codebooks(windows_train, n_centroids, centroid_len, use_sign_invariant=False,do_sphere=False, tol_factor=1e-4):
+# use_svd flag added ----------------
+def create_codebooks(windows_train, n_centroids, centroid_len, use_sign_invariant=False, use_svd=False, do_sphere=False, tol_factor=1e-4):
+    print(f"DEBUG: create_codebooks called with use_svd={use_svd}, do_sphere={do_sphere}")
     if do_sphere:
         windows_train /= np.sqrt(np.sum(windows_train**2,axis=1,keepdims=True))
     centroids, labels, shifts, _, inertia, n_iter = si_kmeans(
-        windows_train.squeeze(), n_centroids, centroid_len, metric='cosine', use_sign_invariant=use_sign_invariant,do_sphere=True,
+        windows_train.squeeze(), n_centroids, centroid_len, metric='cosine', use_sign_invariant=use_sign_invariant, use_svd=use_svd, do_sphere=do_sphere,
         init='random', n_init=1, tol=tol_factor*np.var(windows_train), rng=0,  verbose=True)
 
     return centroids,labels, shifts, inertia, n_iter # distances
@@ -428,4 +429,3 @@ def get_features(df, test_fold, split, train_valid_test, n_segments, segment_len
 # classes_type = list({class_type(x) for x in gensex2subject})
 # classes_sex = list({class_sex(x) for x in gensex2subject})
 # classes_all = list({class_all(x) for x in gensex2subject})
-

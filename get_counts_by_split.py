@@ -21,7 +21,7 @@ def strip_leading_from_list_filenames(list_filenames):
 
 def main(df_filename, test_fold, split, train_valid_test, strain=None, tsc=None, source=None, hours_in_segment=None, n_segments=None,
          window_length_s=2, n_windows=40000, centroid_length_s=1, n_centroids=200,
-         use_sign_invariant=False,use_spectral=False,use_sphere=False,hpc=False):
+         use_sign_invariant=False,use_spectral=False,use_sphere=False,hpc=False,use_svd=False):
 
     strains = ('BXD87', 'DBA2', 'C57B6')
     tscs = ('Het', 'WT')
@@ -61,7 +61,11 @@ def main(df_filename, test_fold, split, train_valid_test, strain=None, tsc=None,
             str_sph = '_sph'
         else:
             str_sph = ''
-        param_string = str(n_windows) + '_' + str(window_length) + '_' + str(n_centroids) + '_' + str(centroid_len) + str_si +str_sph
+        if use_svd: 
+            str_svd = '_svd'
+        else:
+            str_svd = ''
+        param_string = str(n_windows) + '_' + str(window_length) + '_' + str(n_centroids) + '_' + str(centroid_len) + str_si + str_sph + str_svd
 
 
     waveform_dict = load_centroid_dict(test_fold, split, param_string)
@@ -159,7 +163,10 @@ if __name__ == '__main__':
     parser.add_argument('--sign_invariant', dest='use_sign_invariant', action='store_true')
     parser.set_defaults(use_sign_invariant=False)
     parser.add_argument('--sphere', dest='use_sphere', action='store_true')
-    parser.set_defaults(use_sphere=False)    
+    parser.set_defaults(use_sphere=False)
+    # NEW SVD FLAG -----------------
+    parser.add_argument('--svd', dest='use_svd', action='store_true')
+    parser.set_defaults(use_svd=False)    
     parser.add_argument('--spectral', dest='use_spectral', action='store_true')
     parser.set_defaults(use_spectral=False)
     parser.add_argument('--hpc', action='store_true')
@@ -174,5 +181,4 @@ if __name__ == '__main__':
     main(args.df, args.fold, args.split, args.learn, args.class1, args.class2, args.source, args.hours_in_segment, args.segments,
          args.window_length_s, args.windows, args.centroid_length_s, args.n_centroids,args.use_sign_invariant,args.use_spectral,
          args.use_sphere,
-         args.hpc)
-
+         args.hpc, args.use_svd)
