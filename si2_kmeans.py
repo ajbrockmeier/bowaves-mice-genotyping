@@ -10,7 +10,7 @@ from scipy.cluster.vq import vq
 from sklearn.utils.extmath import stable_cumsum, squared_norm, row_norms
 from sklearn.exceptions import ConvergenceWarning
 from BOWaves.utilities import sikmeans_utils
-
+from scipy.sparse.linalg import svds
 from si_vq import si_vq,si2_vq
 
 
@@ -24,12 +24,12 @@ def _random_init(X, n_clusters, centroid_length, rng):
     return centroids
 
 
-
 ###############################################################################
 # Main algorithm
 
+# SVD flag added --------------------
 def si_kmeans(X, n_clusters, centroid_length, metric='cosine',
-                               init='random', use_sign_invariant=False,do_sphere=True,
+                               init='random', use_sign_invariant=False, use_svd=True, do_sphere=True,
               n_init=10, max_iter=300, tol=1e-4, rng=None, verbose=False):
     """
     Shift-invariant k-means algorithm
@@ -101,7 +101,7 @@ def si_kmeans(X, n_clusters, centroid_length, metric='cosine',
     for seed in streams:
         # run a shift-invariant k-means once
         centroids, labels, shifts, distances, inertia, n_iter_ = si_kmeans_single(
-            X, n_clusters, centroid_length, metric=metric, use_sign_invariant=use_sign_invariant,do_sphere=do_sphere,
+            X, n_clusters, centroid_length, metric=metric, use_sign_invariant=use_sign_invariant,do_sphere=do_sphere, use_svd=use_svd,
             init=init, max_iter=max_iter, tol=tol, rng=seed, verbose=verbose)
         # determine if these results are the best so far
         if best_inertia is None or inertia < best_inertia:
@@ -124,8 +124,8 @@ def si_kmeans(X, n_clusters, centroid_length, metric='cosine',
 
     return best_centroids, best_labels, best_shifts, best_distances, best_inertia, best_n_iter
 
-
-def si_kmeans_single(X, n_clusters, centroid_length, metric='euclidean', use_sign_invariant=False, do_sphere=False,
+# SVD flag added --------------------
+def si_kmeans_single(X, n_clusters, centroid_length, metric='euclidean', use_sign_invariant=False, do_sphere=False, use_svd=False,
                      init='k-means++', max_iter=300, tol=1e-3, rng=None, verbose=False):
     """
     Single run of shift-invariant k-means
@@ -147,14 +147,20 @@ def si_kmeans_single(X, n_clusters, centroid_length, metric='euclidean', use_sig
     centroids = _init_centroids_update_step(
         X, centroid_length, n_clusters, labels, shifts, signs, do_sphere) # NEW
 
+    centroids /= np.sqrt(np.sum(centroids ** 2, axis = 1, keepdims= True))
+
     if verbose:
         print('Initialization completed.')
 
     for iteration in range(max_iter):
         centroids_old = centroids.copy()
         labels, shifts, distances, signs = _assignment_step(X, centroids, metric, use_sign_invariant)
+        # SVD flag added --------------------
         centroids = _centroids_update_step(
-            X, centroid_length, n_clusters, labels, shifts, signs, do_sphere)
+            X, centroid_length, n_clusters, labels, shifts, signs, do_sphere, use_svd)
+
+        centroids /= np.sqrt(np.sum(centroids ** 2, axis = 1, keepdims= True))
+
 
         inertia = distances.mean()
 
@@ -215,27 +221,59 @@ def _assignment_step(X, centroids, metric, use_sign_invariant):
 
     return labels, shifts, distances, signs
 
-
-def _centroids_update_step(X, centroid_length, n_clusters, labels, shifts, signs, do_sphere=False):
+# New SVD code is included here --------------------------------------------------------------------
+def _centroids_update_step(X, centroid_length, n_clusters, labels, shifts, signs, do_sphere=False, use_svd=False):
     """
     Update the cluster centroids
     """
-
+    n_samples = X.shape[0]
+    X_shifted = np.zeros((n_samples, centroid_length))
     centroids = np.zeros((n_clusters, centroid_length))
 
-    for sample_id, sample in enumerate(X):
-        cluster_id = labels[sample_id]
-        shift = shifts[sample_id]
-        if do_sphere:
-            x_shift = signs[sample_id]*sample[shift:shift+centroid_length]
-            centroids[cluster_id] += x_shift/np.sqrt(np.sum(x_shift**2))
-            
-        else:
-            centroids[cluster_id] += signs[sample_id]*sample[shift:shift+centroid_length]
 
-    # NOTE: Some clusters might be empty
-    cluster_id, cluster_size = np.unique(labels, return_counts=True)
-    centroids[cluster_id, :] /= cluster_size[:, np.newaxis]
+    # New SVD code for if use_svd is True
+    if use_svd:
+
+        for sample_id, sample in enumerate(X):
+            shift = shifts[sample_id]
+            x_window = signs[sample_id] * sample[shift:shift + centroid_length]
+
+            if do_sphere:
+                # Normalization Step
+                X_shifted[sample_id] = x_window / (np.sqrt(np.sum(x_window**2))+ 1e-12)
+            
+            else:
+                X_shifted[sample_id] = x_window
+
+        cluster_ids = np.unique(labels)
+            
+        for cluster_id in cluster_ids:
+            members = (labels == cluster_id)
+            n_members = np.sum(members)
+            if n_members == 1:
+                centroids[cluster_id] = X_shifted[members].ravel()
+            else:
+                # SVD Step
+                coef, _, vh = svds(X_shifted[members], k=1)
+                centroids[cluster_id] = vh.ravel() * np.sign(np.mean(coef.ravel()))
+    
+    # This part of the code is unedited for non-SVD use 
+    else:     
+
+        for sample_id, sample in enumerate(X):
+            cluster_id = labels[sample_id]
+            shift = shifts[sample_id]
+            
+            if do_sphere:
+                # Normalization Step
+                x_shift = signs[sample_id]*sample[shift:shift + centroid_length]
+                centroids[cluster_id] += x_shift/np.sqrt(np.sum(x_shift**2))
+            else:
+                centroids[cluster_id] += signs[sample_id]*sample[shift:shift+centroid_length]
+            
+        # NOTE: Some clusters might be empty
+        cluster_id, cluster_size = np.unique(labels, return_counts=True)
+        centroids[cluster_id, :] /= cluster_size[:, np.newaxis]
 
     return centroids
 
